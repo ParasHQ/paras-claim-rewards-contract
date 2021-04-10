@@ -51,4 +51,14 @@ impl Reward {
         }
     }
 
+    pub fn get_account_id(&self) -> AccountId{
+        self.account_id.clone()
+    }
+    pub fn get_amount(&self) -> u128 {
+        self.amount
+    }
+    pub fn get_memo(&self) -> String {
+        self.memo.clone()
+    }
+
 }

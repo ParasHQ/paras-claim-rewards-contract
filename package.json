@@ -5,7 +5,8 @@
   "scripts": {
     "build": "cargo build --all --target wasm32-unknown-unknown --release",
     "postbuild": "cp target/wasm32-unknown-unknown/release/paras_claim_rewards_contract.wasm ./res/",
-    "dev": "near dev-deploy --wasmFile ./res/paras_claim_rewards_contract.wasm"
+    "dev": "near dev-deploy --wasmFile ./res/paras_claim_rewards_contract.wasm",
+    "test": "cargo test -- --nocapture --color always"
   },
   "repository": {
     "type": "git",
