@@ -23,10 +23,6 @@ yarn test
 
 ## View methods
 
-```
-reward_amount({"key":"irfi.testnet"})
-```
-
 ### Get rewards
 
 ```
