@@ -22,14 +22,12 @@ const _hexToArr = (str) => {
 const contractConfig = {
 	changeMethods: [
 		'new',
-        'ft_transfer',
-        'ft_transfer_call',
-        'ft_resolve_transfer'
+        'claim_rewards',
+		'push_reward',
 	],
     viewMethods: [
-        'ft_total_supply',
-        'ft_balance_of',
-        'ft_metadata'    
+		'get_rewards',
+        'get_reward_amount',
     ]
 }
 
