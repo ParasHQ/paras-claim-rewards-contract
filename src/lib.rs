@@ -86,7 +86,7 @@ impl Contract{
         let amount: u128 = amount.into();
         assert!(amount <= current_amount, "Amount higher than unclaimed rewards");
 
-        let amount_sub = current_amount.checked_sub(amount).expect("ERR_INTEGER_UNDERFLOW");
+        let amount_sub = current_amount.checked_sub(amount).expect("ERR_INTEGER_OVERFLOW");
 
         self.reward_amount.insert(&env::predecessor_account_id(), &amount_sub);
         ext_fungible_token::ft_transfer(
@@ -111,7 +111,7 @@ impl Contract{
             memo,
         );
         let current_amount = self.internal_reward_amount(account_id.clone().into());
-        self.deposited_amount = self.deposited_amount.checked_sub(amount.into()).expect("ERR_INTEGER_UNDERFLOW");
+        self.deposited_amount = self.deposited_amount.checked_sub(amount.into()).expect("ERR_INTEGER_OVERFLOW");
         let amount_add = current_amount.checked_add(amount.into()).expect("ERR_INTEGER_OVERFLOW");
 
 
