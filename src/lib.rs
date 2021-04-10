@@ -44,7 +44,7 @@ impl Contract{
         owner: ValidAccountId,
         token: ValidAccountId,
     ) -> Self {
-        assert!(!env::state_exists(), "Already initialized");
+        assert!(!env::state_exists(), "ERR_CONTRACT_ALREADY_INTIALIZED");
         let this = Self {
             owner: owner.into(),
             token: token.into(),
@@ -84,7 +84,7 @@ impl Contract{
     pub fn claim_reward(&mut self, amount: U128) -> Promise {
         let current_amount = self.internal_reward_amount(env::predecessor_account_id());
         let amount: u128 = amount.into();
-        assert!(amount <= current_amount, "Amount higher than unclaimed rewards");
+        assert!(amount <= current_amount, "ERR_AMOUNT_TOO_HIGH");
 
         let amount_sub = current_amount.checked_sub(amount).expect("ERR_INTEGER_OVERFLOW");
 
