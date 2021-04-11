@@ -67,8 +67,8 @@ impl Contract{
             .collect()
     }
 
-    pub fn get_reward_amount(&self, account_id: ValidAccountId) -> u128 {
-        self.internal_reward_amount(account_id.into())
+    pub fn get_reward_amount(&self, account_id: ValidAccountId) -> U128 {
+        self.internal_reward_amount(account_id.into()).into()
     }
     
     #[private]
@@ -228,7 +228,7 @@ mod tests {
                 .attached_deposit(0)
                 .build());
         contract.claim_reward(TEN_PARAS_TOKEN);
-        assert_eq!(contract.get_reward_amount(accounts(3)), 0);
+        assert_eq!(contract.get_reward_amount(accounts(3)), U128(0));
     }
 
     #[test]
