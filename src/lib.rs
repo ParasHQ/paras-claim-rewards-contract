@@ -3,16 +3,23 @@ use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, assert_one_yocto, P
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::collections::{LookupMap};
 use near_contract_standards::upgrade::Ownable;
+//use near_contract_standards::storage_management::StorageBalance;
+use near_sdk::serde::{Serialize, Deserialize};
 
 near_sdk::setup_alloc!();
 
-use crate::utils::{ext_fungible_token, GAS_FOR_FT_TRANSFER};
+use crate::utils::{ext_fungible_token, ext_self, GAS_FOR_FT_TRANSFER};
 use crate::rewards::{Rewards, Reward};
 mod utils;
 mod rewards;
 mod token_receiver;
 
-
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct StorageBalance {
+    pub total: U128,
+    pub available: U128,
+}
 /*
     Implementation of claim rewards.
 */
@@ -82,22 +89,50 @@ impl Contract{
     }
     
     pub fn claim_reward(&mut self, amount: U128) -> Promise {
-        let current_amount = self.internal_reward_amount(env::predecessor_account_id());
+        ext_fungible_token::storage_balance_of(
+            env::predecessor_account_id(),
+            &self.token,
+            0,
+            env::prepaid_gas()/4
+        ).then(
+            ext_self::claim_reward_callback(
+                amount, 
+                env::predecessor_account_id(),
+                &env::current_account_id(),
+                0,
+                env::prepaid_gas()/4
+            )
+        )
+
+    }
+
+    #[private]
+    pub fn claim_reward_callback(&mut self, #[callback] value_of_storage_balance: Option<StorageBalance>, amount: U128, account_id: AccountId)  {
+
+        match value_of_storage_balance {
+            Some(_) => (),
+            None => panic!("ERR_ACCOUNT_NOT_REGISTERED")
+        };
+
+        let current_amount = self.internal_reward_amount(account_id.clone());
         let amount: u128 = amount.into();
         assert!(amount <= current_amount, "ERR_AMOUNT_TOO_HIGH");
 
         let amount_sub = current_amount.checked_sub(amount).expect("ERR_INTEGER_OVERFLOW");
 
-        self.reward_amount.insert(&env::predecessor_account_id(), &amount_sub);
+        self.reward_amount.insert(&account_id, &amount_sub);
+
         ext_fungible_token::ft_transfer(
-            env::predecessor_account_id().into(),
+            account_id.into(),
             amount.into(),
             None,
             &self.token,
             1,
             GAS_FOR_FT_TRANSFER
-        )
+        );
+
     }
+
 
     #[payable]
     pub fn push_reward(&mut self, account_id: ValidAccountId, amount: U128, memo: String) {
