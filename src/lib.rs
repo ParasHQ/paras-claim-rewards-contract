@@ -44,7 +44,7 @@ impl Contract{
         owner: ValidAccountId,
         token: ValidAccountId,
     ) -> Self {
-        assert!(!env::state_exists(), "Already initialized");
+        assert!(!env::state_exists(), "ERR_CONTRACT_ALREADY_INTIALIZED");
         let this = Self {
             owner: owner.into(),
             token: token.into(),
@@ -67,8 +67,8 @@ impl Contract{
             .collect()
     }
 
-    pub fn get_reward_amount(&self, account_id: ValidAccountId) -> u128 {
-        self.internal_reward_amount(account_id.into())
+    pub fn get_reward_amount(&self, account_id: ValidAccountId) -> U128 {
+        self.internal_reward_amount(account_id.into()).into()
     }
     
     #[private]
@@ -84,9 +84,9 @@ impl Contract{
     pub fn claim_reward(&mut self, amount: U128) -> Promise {
         let current_amount = self.internal_reward_amount(env::predecessor_account_id());
         let amount: u128 = amount.into();
-        assert!(amount <= current_amount, "Amount higher than unclaimed rewards");
+        assert!(amount <= current_amount, "ERR_AMOUNT_TOO_HIGH");
 
-        let amount_sub = current_amount.checked_sub(amount).expect("ERR_INTEGER_UNDERFLOW");
+        let amount_sub = current_amount.checked_sub(amount).expect("ERR_INTEGER_OVERFLOW");
 
         self.reward_amount.insert(&env::predecessor_account_id(), &amount_sub);
         ext_fungible_token::ft_transfer(
@@ -111,7 +111,7 @@ impl Contract{
             memo,
         );
         let current_amount = self.internal_reward_amount(account_id.clone().into());
-        self.deposited_amount = self.deposited_amount.checked_sub(amount.into()).expect("ERR_INTEGER_UNDERFLOW");
+        self.deposited_amount = self.deposited_amount.checked_sub(amount.into()).expect("ERR_INTEGER_OVERFLOW");
         let amount_add = current_amount.checked_add(amount.into()).expect("ERR_INTEGER_OVERFLOW");
 
 
@@ -228,7 +228,7 @@ mod tests {
                 .attached_deposit(0)
                 .build());
         contract.claim_reward(TEN_PARAS_TOKEN);
-        assert_eq!(contract.get_reward_amount(accounts(3)), 0);
+        assert_eq!(contract.get_reward_amount(accounts(3)), U128(0));
     }
 
     #[test]
