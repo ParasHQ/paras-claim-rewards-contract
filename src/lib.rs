@@ -104,14 +104,14 @@ impl Contract{
             None => panic!("ERR_ACCOUNT_NOT_REGISTERED")
         };
 
-        let mut current_rewards = self.records.get(&env::predecessor_account_id()).unwrap();
+        let mut current_rewards = self.records.get(&account_id).unwrap();
         let current_amount = current_rewards.internal_reward_amount();
         let amount: u128 = amount.into();
         assert!(amount <= current_amount, "ERR_AMOUNT_TOO_HIGH");
 
         current_rewards.internal_set_reward_amount(current_amount.checked_sub(amount).expect("ERR_INTEGER_OVERFLOW"));
 
-        self.records.insert(&env::predecessor_account_id(), &current_rewards);
+        self.records.insert(&account_id, &current_rewards);
         ext_fungible_token::ft_transfer(
             account_id.into(),
             amount.into(),
@@ -250,6 +250,16 @@ mod tests {
                 .attached_deposit(0)
                 .build());
         contract.claim_reward(TEN_PARAS_TOKEN);
+        testing_env!(context
+                .predecessor_account_id(accounts(0))
+                .attached_deposit(0)
+                .build());
+        let storage_balance: Option<StorageBalance> = Some(StorageBalance {
+            total: U128::from(12500000000000000000000),
+            available: U128::from(0)
+
+        });
+        contract.claim_reward_callback(storage_balance, TEN_PARAS_TOKEN, accounts(3).into());
         assert_eq!(contract.get_reward_amount(accounts(3)), U128(0));
     }
 
