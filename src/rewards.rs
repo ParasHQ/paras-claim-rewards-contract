@@ -15,18 +15,29 @@ pub struct Reward {
 
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Rewards {
-    rewards: Vector<Reward>
+    rewards: Vector<Reward>,
+    amount: u128,
 }
 
 impl Rewards{
     pub fn new() -> Self {
         Self {
-            rewards: Vector::new(b"r".to_vec())
+            rewards: Vector::new(b"r".to_vec()),
+            amount: 0,
         }
     }
 
+    
     pub fn internal_add_new_reward(&mut self, reward: Reward) {
         self.rewards.push(&reward);
+    }
+
+    pub fn internal_set_reward_amount(&mut self, amount: u128) {
+        self.amount = amount;
+    }
+
+    pub fn internal_reward_amount(&self) -> u128 {
+        return self.amount;
     }
 
     pub fn get_reward(&self, reward_id: u64) -> Reward {
