@@ -45,7 +45,7 @@ near call --accountId owner.testnet --networkId network_id contract_account new 
 ### Claim reward
 
 ```
-claim_reward({"amount":"1"})
+claim_reward '{"amount":"1"}' --amount 0.000000000000000000000001
 ```
 
 ### Push reward - Only Owner
