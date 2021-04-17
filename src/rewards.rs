@@ -20,13 +20,12 @@ pub struct Rewards {
 }
 
 impl Rewards{
-    pub fn new() -> Self {
+    pub fn new(account_id: AccountId) -> Self {
         Self {
-            rewards: Vector::new(b"r".to_vec()),
+            rewards: Vector::new(account_id.as_bytes().to_vec()),
             amount: 0,
         }
     }
-
     
     pub fn internal_add_new_reward(&mut self, reward: Reward) {
         self.rewards.push(&reward);

@@ -95,7 +95,7 @@ impl Contract{
         self.assert_owner();
         assert_one_yocto();
         assert!(self.deposited_amount >= amount.into(), "ERR_DEPOSITED_AMOUNT_NOT_ENOUGH");
-        let mut current_rewards = self.records.get(account_id.as_ref()).unwrap_or(Rewards::new());
+        let mut current_rewards = self.records.get(account_id.as_ref()).unwrap_or(Rewards::new(account_id.clone().into()));
         let new_reward: Reward = Reward::new(
             account_id.clone().into(),
             amount.into(),
