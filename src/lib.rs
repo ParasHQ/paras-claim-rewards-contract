@@ -3,16 +3,23 @@ use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, assert_one_yocto, P
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::collections::{LookupMap};
 use near_contract_standards::upgrade::Ownable;
+//use near_contract_standards::storage_management::StorageBalance;
+use near_sdk::serde::{Serialize, Deserialize};
 
 near_sdk::setup_alloc!();
 
-use crate::utils::{ext_fungible_token, GAS_FOR_FT_TRANSFER};
+use crate::utils::{ext_fungible_token, ext_self, GAS_FOR_FT_TRANSFER};
 use crate::rewards::{Rewards, Reward};
 mod utils;
 mod rewards;
 mod token_receiver;
 
-
+#[derive(Serialize, Deserialize)]
+#[serde(crate = "near_sdk::serde")]
+pub struct StorageBalance {
+    pub total: U128,
+    pub available: U128,
+}
 /*
     Implementation of claim rewards.
 */
@@ -72,23 +79,50 @@ impl Contract{
     
     
     pub fn claim_reward(&mut self, amount: U128) -> Promise {
-        let mut current_rewards = self.records.get(&env::predecessor_account_id()).unwrap();
+        ext_fungible_token::storage_balance_of(
+            env::predecessor_account_id(),
+            &self.token,
+            0,
+            env::prepaid_gas()/4
+        ).then(
+            ext_self::claim_reward_callback(
+                amount, 
+                env::predecessor_account_id(),
+                &env::current_account_id(),
+                0,
+                env::prepaid_gas()/4
+            )
+        )
+
+    }
+
+    #[private]
+    pub fn claim_reward_callback(&mut self, #[callback] value_of_storage_balance: Option<StorageBalance>, amount: U128, account_id: AccountId)  {
+
+        match value_of_storage_balance {
+            Some(_) => (),
+            None => panic!("ERR_ACCOUNT_NOT_REGISTERED")
+        };
+
+        let mut current_rewards = self.records.get(&account_id).unwrap();
         let current_amount = current_rewards.internal_reward_amount();
         let amount: u128 = amount.into();
         assert!(amount <= current_amount, "ERR_AMOUNT_TOO_HIGH");
 
         current_rewards.internal_set_reward_amount(current_amount.checked_sub(amount).expect("ERR_INTEGER_OVERFLOW"));
 
-        self.records.insert(&env::predecessor_account_id(), &current_rewards);
+        self.records.insert(&account_id, &current_rewards);
         ext_fungible_token::ft_transfer(
-            env::predecessor_account_id().into(),
+            account_id.into(),
             amount.into(),
             None,
             &self.token,
             1,
             GAS_FOR_FT_TRANSFER
-        )
+        );
+
     }
+
 
     #[payable]
     pub fn push_reward(&mut self, account_id: ValidAccountId, amount: U128, memo: String) {
@@ -214,6 +248,16 @@ mod tests {
                 .attached_deposit(0)
                 .build());
         contract.claim_reward(TEN_PARAS_TOKEN);
+        testing_env!(context
+                .predecessor_account_id(accounts(0))
+                .attached_deposit(0)
+                .build());
+        let storage_balance: Option<StorageBalance> = Some(StorageBalance {
+            total: U128::from(12500000000000000000000),
+            available: U128::from(0)
+
+        });
+        contract.claim_reward_callback(storage_balance, TEN_PARAS_TOKEN, accounts(3).into());
         assert_eq!(contract.get_reward_amount(accounts(3)), U128(0));
     }
 
