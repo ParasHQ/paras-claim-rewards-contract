@@ -7,7 +7,7 @@ use near_contract_standards::upgrade::Ownable;
 near_sdk::setup_alloc!();
 
 use crate::utils::{ext_fungible_token, GAS_FOR_FT_TRANSFER};
-use crate::rewards::{Rewards, Reward};
+use crate::rewards::{Rewards, Reward, RewardD};
 mod utils;
 mod rewards;
 mod token_receiver;
@@ -31,8 +31,6 @@ impl Ownable for Contract {
     }
 
     fn set_owner(&mut self, owner: AccountId) {
-        self.assert_owner();
-        self.owner = owner;
     }
 }
 
@@ -58,10 +56,10 @@ impl Contract{
         self.deposited_amount = self.deposited_amount.checked_add(amount).expect("ERR_INTEGER_OVERFLOW");
     }
 
-    pub fn get_rewards(&self, from_index: u64, limit: u64, account_id: ValidAccountId) -> Vec<Reward> {
+    pub fn get_rewards(&self, from_index: u64, limit: u64, account_id: ValidAccountId) -> Vec<RewardD> {
         let user_rewards = self.records.get(account_id.as_ref()).unwrap();
-        (from_index..std::cmp::min(from_index + limit, user_rewards.get_rewards_len()))
-            .map(|index| user_rewards.get_reward(index))
+        (from_index..std::cmp::min(from_index + limit, user_rewards.get_rewards_len())).rev()
+            .map(|index| user_rewards.get_reward(index).to_reward_d())
             .collect()
     }
 
@@ -71,7 +69,9 @@ impl Contract{
     }
     
     
+    #[payable]
     pub fn claim_reward(&mut self, amount: U128) -> Promise {
+        assert_one_yocto();
         let mut current_rewards = self.records.get(&env::predecessor_account_id()).unwrap();
         let current_amount = current_rewards.internal_reward_amount();
         let amount: u128 = amount.into();
@@ -211,7 +211,7 @@ mod tests {
         contract.push_reward(accounts(3), TEN_PARAS_TOKEN, "first reward".to_string());
         testing_env!(context
                 .predecessor_account_id(accounts(3))
-                .attached_deposit(0)
+                .attached_deposit(1)
                 .build());
         contract.claim_reward(TEN_PARAS_TOKEN);
         assert_eq!(contract.get_reward_amount(accounts(3)), U128(0));

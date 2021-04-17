@@ -5,10 +5,16 @@ use near_sdk::collections::{Vector};
 use near_sdk::serde::{Deserialize, Serialize};
 
 
-#[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
+#[derive(BorshDeserialize, BorshSerialize)]
 pub struct Reward {
     amount: u128,
     memo: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct RewardD {
+    amount: U128,
+    memo: String
 }
 
 
@@ -57,7 +63,6 @@ impl Reward {
             memo: memo,
         }
     }
-
     pub fn get_amount(&self) -> u128 {
         self.amount
     }
@@ -65,4 +70,18 @@ impl Reward {
         self.memo.clone()
     }
 
+    pub fn to_reward_d(&self) -> RewardD {
+        RewardD::new(self)
+    }
+}
+
+impl RewardD {
+    pub fn new(
+        reward: &Reward
+    ) -> Self {
+        Self {
+            amount: reward.get_amount().into(),
+            memo: reward.get_memo()
+        }
+    }
 }
