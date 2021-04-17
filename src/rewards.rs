@@ -1,13 +1,12 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{AccountId};
-use near_sdk::json_types::{ValidAccountId, U128};
+use near_sdk::json_types::{U128};
 use near_sdk::collections::{Vector};
 use near_sdk::serde::{Deserialize, Serialize};
 
 
 #[derive(BorshDeserialize, BorshSerialize, Deserialize, Serialize)]
 pub struct Reward {
-    account_id: AccountId,
     amount: u128,
     memo: String,
 }
@@ -50,20 +49,15 @@ impl Rewards{
 
 impl Reward {
     pub fn new(
-        account_id: ValidAccountId,
         amount: U128,
         memo: String,
     ) -> Self {
         Self {
-            account_id: account_id.into(),
             amount: amount.into(),
             memo: memo,
         }
     }
 
-    pub fn get_account_id(&self) -> AccountId{
-        self.account_id.clone()
-    }
     pub fn get_amount(&self) -> u128 {
         self.amount
     }
