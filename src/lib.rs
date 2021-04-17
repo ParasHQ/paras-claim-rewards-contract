@@ -22,7 +22,6 @@ pub struct Contract {
     owner: AccountId,
     token: AccountId,
     records: LookupMap<AccountId, Rewards>,
-    reward_amount: LookupMap<AccountId, u128>,
     deposited_amount: u128,
 }
 
@@ -49,7 +48,6 @@ impl Contract{
             owner: owner.into(),
             token: token.into(),
             records: LookupMap::new(b"t".to_vec()),
-            reward_amount: LookupMap::new(b"c".to_vec()),
             deposited_amount: 0,
         };
         this
@@ -68,27 +66,20 @@ impl Contract{
     }
 
     pub fn get_reward_amount(&self, account_id: ValidAccountId) -> U128 {
-        self.internal_reward_amount(account_id.into()).into()
+        let current_rewards = self.records.get(account_id.as_ref()).unwrap();
+        current_rewards.internal_reward_amount().into()
     }
     
-    #[private]
-    pub fn internal_reward_amount(&self, account_id: String) -> u128 {
-        match self.reward_amount.get(&account_id) {
-            Some(value) => {
-                value
-            },
-            None => 0
-        }
-    }
     
     pub fn claim_reward(&mut self, amount: U128) -> Promise {
-        let current_amount = self.internal_reward_amount(env::predecessor_account_id());
+        let mut current_rewards = self.records.get(&env::predecessor_account_id()).unwrap();
+        let current_amount = current_rewards.internal_reward_amount();
         let amount: u128 = amount.into();
         assert!(amount <= current_amount, "ERR_AMOUNT_TOO_HIGH");
 
-        let amount_sub = current_amount.checked_sub(amount).expect("ERR_INTEGER_OVERFLOW");
+        current_rewards.internal_set_reward_amount(current_amount.checked_sub(amount).expect("ERR_INTEGER_OVERFLOW"));
 
-        self.reward_amount.insert(&env::predecessor_account_id(), &amount_sub);
+        self.records.insert(&env::predecessor_account_id(), &current_rewards);
         ext_fungible_token::ft_transfer(
             env::predecessor_account_id().into(),
             amount.into(),
@@ -104,23 +95,19 @@ impl Contract{
         self.assert_owner();
         assert_one_yocto();
         assert!(self.deposited_amount >= amount.into(), "ERR_DEPOSITED_AMOUNT_NOT_ENOUGH");
-        let mut current_rewards = self.records.get(account_id.as_ref()).unwrap_or(Rewards::new());
+        let mut current_rewards = self.records.get(account_id.as_ref()).unwrap_or(Rewards::new(account_id.clone().into()));
         let new_reward: Reward = Reward::new(
-            account_id.clone().into(),
             amount.into(),
             memo,
         );
-        let current_amount = self.internal_reward_amount(account_id.clone().into());
         self.deposited_amount = self.deposited_amount.checked_sub(amount.into()).expect("ERR_INTEGER_OVERFLOW");
-        let amount_add = current_amount.checked_add(amount.into()).expect("ERR_INTEGER_OVERFLOW");
 
-
-        // insert new record to current_record
+        // insert new record to current_record and set reward amount
+        let current_amount = current_rewards.internal_reward_amount();
         current_rewards.internal_add_new_reward(new_reward);
+        current_rewards.internal_set_reward_amount(current_amount.checked_add(amount.into()).expect("ERR_INTEGER_OVERFLOW"));
         self.records.insert(account_id.as_ref(), &current_rewards);
 
-        //set reward amount
-        self.reward_amount.insert(account_id.as_ref(), &amount_add);
     }
 
     /*
@@ -205,7 +192,6 @@ mod tests {
         contract.push_reward(accounts(3), TEN_PARAS_TOKEN, "first reward".to_string());
         assert_eq!(contract.deposited_amount, 0);
         assert_eq!(contract.get_reward_amount(accounts(3)), TEN_PARAS_TOKEN.into());
-        assert_eq!(contract.records.get(accounts(3).as_ref()).unwrap().get_reward(0).get_account_id(), accounts(3).to_string());
         assert_eq!(contract.records.get(accounts(3).as_ref()).unwrap().get_reward(0).get_amount(), TEN_PARAS_TOKEN.into());
         assert_eq!(contract.records.get(accounts(3).as_ref()).unwrap().get_reward(0).get_memo(), "first reward");
     }
