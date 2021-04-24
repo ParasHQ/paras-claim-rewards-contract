@@ -1,17 +1,13 @@
 [package]
-name = "paras-claim-rewards-contract"
-version = "0.1.0"
+name = "paras-claim-rewards-contract-wrapper"
+version = "0.0.1"
 authors = ["Paras"]
 edition = "2018"
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-[dependencies]
-serde = { version = "*", features = ["derive"] }
-serde_json = "*"
-near-sdk = "3.1.0"
-near-contract-standards = "3.1.0"
+[dev-dependencies]
+near-sdk = "=3.1.0"
+near-sdk-sim = "=3.1.0"
+paras-claim-rewards-contract = { path = "./paras-claim-rewards-contract" }
 
 [profile.release]
 codegen-units = 1
@@ -24,4 +20,6 @@ panic = "abort"
 overflow-checks = true
 
 [workspace]
-members = []
+members = [
+  "paras-claim-rewards-contract",
+]
