@@ -1,5 +1,5 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, assert_one_yocto, Promise};
+use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, assert_one_yocto, Promise, log};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::collections::{LookupMap};
 use near_contract_standards::upgrade::Ownable;
@@ -77,9 +77,11 @@ impl Contract{
         let amount: u128 = amount.into();
         assert!(amount <= current_amount, "ERR_AMOUNT_TOO_HIGH");
 
+        log!("Claiming reward : {} PARAS", (amount as f64 / 1e24));
         current_rewards.internal_set_reward_amount(current_amount.checked_sub(amount).expect("ERR_INTEGER_OVERFLOW"));
 
         self.records.insert(&env::predecessor_account_id(), &current_rewards);
+
         ext_fungible_token::ft_transfer(
             env::predecessor_account_id().into(),
             amount.into(),
@@ -107,6 +109,8 @@ impl Contract{
         current_rewards.internal_add_new_reward(new_reward);
         current_rewards.internal_set_reward_amount(current_amount.checked_add(amount.into()).expect("ERR_INTEGER_OVERFLOW"));
         self.records.insert(account_id.as_ref(), &current_rewards);
+
+        log!("Current reward for {} : {} PARAS", account_id.to_string(), current_rewards.internal_reward_amount() as f64 / 1e24);
 
     }
 
