@@ -46,7 +46,8 @@ impl Contract{
 
     pub fn get_rewards(&self, from_index: u64, limit: u64, account_id: ValidAccountId) -> Vec<WrappedReward> {
         let user_rewards = self.records.get(account_id.as_ref()).unwrap();
-        (from_index..std::cmp::min(from_index + limit, user_rewards.get_rewards_len())).rev()
+        let end_index = user_rewards.get_rewards_len().saturating_sub(from_index);
+        (end_index.saturating_sub(limit)..end_index).rev()
             .map(|index| user_rewards.get_reward(index).to_wreward())
             .collect()
     }
