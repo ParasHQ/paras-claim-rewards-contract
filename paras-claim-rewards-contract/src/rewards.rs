@@ -12,7 +12,7 @@ pub struct Reward {
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct RewardD {
+pub struct WrappedReward {
     amount: U128,
     memo: String
 }
@@ -70,12 +70,12 @@ impl Reward {
         self.memo.clone()
     }
 
-    pub fn to_reward_d(&self) -> RewardD {
-        RewardD::new(self)
+    pub fn to_wreward(&self) -> WrappedReward {
+        WrappedReward::new(self)
     }
 }
 
-impl RewardD {
+impl WrappedReward {
     pub fn new(
         reward: &Reward
     ) -> Self {

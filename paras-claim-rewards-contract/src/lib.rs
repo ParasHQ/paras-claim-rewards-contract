@@ -2,16 +2,14 @@ use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, assert_one_yocto, Promise, log};
 use near_sdk::json_types::{ValidAccountId, U128};
 use near_sdk::collections::{LookupMap};
-use near_contract_standards::upgrade::Ownable;
 
 near_sdk::setup_alloc!();
 
 use crate::utils::{ext_fungible_token, GAS_FOR_FT_TRANSFER};
-use crate::rewards::{Rewards, Reward, RewardD};
+use crate::rewards::{Rewards, Reward, WrappedReward};
 mod utils;
 mod rewards;
 mod token_receiver;
-
 
 /*
     Implementation of claim rewards.
@@ -23,15 +21,6 @@ pub struct Contract {
     token: AccountId,
     records: LookupMap<AccountId, Rewards>,
     deposited_amount: u128,
-}
-
-impl Ownable for Contract {
-    fn get_owner(&self) -> AccountId {
-        self.owner.clone()
-    }
-
-    fn set_owner(&mut self, owner: AccountId) {
-    }
 }
 
 #[near_bindgen]
@@ -51,15 +40,15 @@ impl Contract{
         this
     }
 
-    #[private]
-    pub fn internal_deposit(&mut self, amount: u128) {
+    fn internal_deposit(&mut self, amount: u128) {
         self.deposited_amount = self.deposited_amount.checked_add(amount).expect("ERR_INTEGER_OVERFLOW");
     }
 
-    pub fn get_rewards(&self, from_index: u64, limit: u64, account_id: ValidAccountId) -> Vec<RewardD> {
+    pub fn get_rewards(&self, from_index: u64, limit: u64, account_id: ValidAccountId) -> Vec<WrappedReward> {
         let user_rewards = self.records.get(account_id.as_ref()).unwrap();
-        (from_index..std::cmp::min(from_index + limit, user_rewards.get_rewards_len())).rev()
-            .map(|index| user_rewards.get_reward(index).to_reward_d())
+        let end_index = user_rewards.get_rewards_len().saturating_sub(from_index);
+        (end_index.saturating_sub(limit)..end_index).rev()
+            .map(|index| user_rewards.get_reward(index).to_wreward())
             .collect()
     }
 
@@ -94,7 +83,7 @@ impl Contract{
 
     #[payable]
     pub fn push_reward(&mut self, account_id: ValidAccountId, amount: U128, memo: String) {
-        self.assert_owner();
+        assert_eq!(self.owner, env::predecessor_account_id(), "ERR_NOT_OWNER");
         assert_one_yocto();
         assert!(self.deposited_amount >= amount.into(), "ERR_DEPOSITED_AMOUNT_NOT_ENOUGH");
         let mut current_rewards = self.records.get(account_id.as_ref()).unwrap_or(Rewards::new(account_id.clone().into()));
@@ -114,14 +103,6 @@ impl Contract{
 
     }
 
-    /*
-    pub fn init_reward(&mut self, account_id: ValidAccountId) {
-        self.assert_owner();
-        assert!(self.records.contains_key(account_id.as_ref()), "ERR_ACCOUNT_ALREADY_EXIST");
-
-        self.records.insert(account_id.as_ref(), &Rewards::new());
-    }
-    */
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
