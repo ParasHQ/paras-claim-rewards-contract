@@ -4,14 +4,14 @@
   "description": "Paras claim rewards contract",
   "scripts": {
     "build": "./build.sh",
-    "test": "cargo test -- --nocapture --color always",
+    "test": "cargo test --all -- --nocapture --color always",
     "deploy:contract:dev": "yarn build && NODE_ENV=testnet near dev-deploy --wasmFile ./res/paras_claim_rewards_contract.wasm",
     "deploy:contract:testnet": "yarn build && NODE_ENV=testnet node deployContract.js",
     "deploy:contract:mainnet": "yarn build && NODE_ENV=mainnet node deployContract.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/near-examples/rust-status-message.git"
+    "url": "git+https://github.com/ParasHQ/paras-claim-rewards-contract.git"
   },
   "keywords": [
     "near-protocol",
@@ -19,7 +19,7 @@
     "rust",
     "smart-contract"
   ],
-  "author": "Paras",
+  "author": "irfi <irfi@paras.id>",
   "license": "(MIT AND Apache-2.0)",
   "dependencies": {
 		"axios": "^0.21.1",
