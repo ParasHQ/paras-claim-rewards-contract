@@ -6,7 +6,7 @@ use near_sdk::collections::{LookupMap};
 near_sdk::setup_alloc!();
 
 use crate::utils::{ext_fungible_token, GAS_FOR_FT_TRANSFER};
-use crate::rewards::{Rewards, Reward, RewardD};
+use crate::rewards::{Rewards, Reward, WrappedReward};
 mod utils;
 mod rewards;
 mod token_receiver;
@@ -44,10 +44,10 @@ impl Contract{
         self.deposited_amount = self.deposited_amount.checked_add(amount).expect("ERR_INTEGER_OVERFLOW");
     }
 
-    pub fn get_rewards(&self, from_index: u64, limit: u64, account_id: ValidAccountId) -> Vec<RewardD> {
+    pub fn get_rewards(&self, from_index: u64, limit: u64, account_id: ValidAccountId) -> Vec<WrappedReward> {
         let user_rewards = self.records.get(account_id.as_ref()).unwrap();
         (from_index..std::cmp::min(from_index + limit, user_rewards.get_rewards_len())).rev()
-            .map(|index| user_rewards.get_reward(index).to_reward_d())
+            .map(|index| user_rewards.get_reward(index).to_wreward())
             .collect()
     }
 
