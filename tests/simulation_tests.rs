@@ -42,6 +42,7 @@ fn simulate_deposit_amount() {
 
 
 }
+
 #[test]
 fn simulate_push_reward() {
     let (root, ft, claim, _, user1) = init();
@@ -79,15 +80,13 @@ fn simulate_push_reward() {
 
     // storage price for 1 account (along with 1 reward)
     // 1e19 per byte (https://github.com/near/nearcore/pull/3881)
-    let claim_account = claim.account().unwrap();
-    let storage_price_one_account = (claim_account.storage_usage - initial_storage_usage) as u128 * 10u128.pow(19);
-    println!("[PUSH REWARD] Storage price for 1 account: {} NEAR", storage_price_one_account as f64 / 1e24);
+    let current_storage_usage = claim.account().unwrap().storage_usage;
+    let storage_price_one_account = (current_storage_usage - initial_storage_usage) as u128 * 10u128.pow(19);
+    println!("[PUSH REWARD] Storage price for adding reward (initial): {} NEAR", storage_price_one_account as f64 / 1e24);
 
-    let current_storage_usage = claim_account.storage_usage;
 
     // gas price for adding 1 reward
-    println!("[PUSH REWARD] Gas burnt for 1 account: {} TeraGas", outcome.gas_burnt() as f64 / 1e12);
-    //println!("{:#?}", outcome.promise_results());
+    println!("[PUSH REWARD] Gas burnt for adding reward (initial): {} TeraGas", outcome.gas_burnt() as f64 / 1e12);
 
     let outcome = call!(
         root,
@@ -99,14 +98,31 @@ fn simulate_push_reward() {
         deposit = 1
     );
 
-    let claim_account = claim.account().unwrap();
-    let storage_price_one_account = (claim_account.storage_usage - current_storage_usage) as u128 * 10u128.pow(19);
-    println!("[PUSH REWARD] Storage price for adding reward: {} NEAR", storage_price_one_account as f64 / 1e24);
-    println!("[PUSH REWARD] Gas burnt for adding reward: {} TeraGas ", outcome.gas_burnt() as f64 / 1e12);
+    let temp_current_storage_usage = claim.account().unwrap().storage_usage;
+    let storage_price_one_account = (temp_current_storage_usage - current_storage_usage) as u128 * 10u128.pow(19);
+    let current_storage_usage = temp_current_storage_usage;
+    println!("[PUSH REWARD] Storage price for adding reward (2nd): {} NEAR", storage_price_one_account as f64 / 1e24);
+    println!("[PUSH REWARD] Gas burnt for adding reward (2nd): {} TeraGas ", outcome.gas_burnt() as f64 / 1e12);
+
+
+    let outcome = call!(
+        root,
+        claim.push_reward(
+            user1.valid_account_id(),
+            U128::from(ptoy(10)),
+            "".to_string()
+        ),
+        deposit = 1
+    );
+
+    let temp_current_storage_usage = claim.account().unwrap().storage_usage;
+    let storage_price_one_account = (temp_current_storage_usage - current_storage_usage) as u128 * 10u128.pow(19);
+    println!("[PUSH REWARD] Storage price for adding reward (3rd): {} NEAR", storage_price_one_account as f64 / 1e24);
+    println!("[PUSH REWARD] Gas burnt for adding reward (3rd): {} TeraGas ", outcome.gas_burnt() as f64 / 1e12);
 
     // assert reward
     let user1_reward: U128 = view!(claim.get_reward_amount(user1.valid_account_id())).unwrap_json();
-    assert_eq!(user1_reward, U128::from(ptoy(20)));
+    assert_eq!(user1_reward, U128::from(ptoy(30)));
 
 }
 
@@ -214,7 +230,7 @@ fn simulate_push_reward_invalid_account() {
     assert_eq!(outcome.promise_errors().len(), 1);
 
     assert!(format!("{:?}", outcome.promise_errors().remove(0))
-        .contains("assertion failed: `(left == right)"));
+        .contains("ERR_NOT_OWNER"));
 
 }
 
