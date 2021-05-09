@@ -1,7 +1,7 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, assert_one_yocto, Promise, log};
+use near_sdk::{env, AccountId, near_bindgen, PanicOnDefault, assert_one_yocto, Promise, log};
 use near_sdk::json_types::{ValidAccountId, U128};
-use near_sdk::collections::{LookupMap};
+use near_sdk::collections::{LookupMap, LookupSet};
 
 near_sdk::setup_alloc!();
 
@@ -17,7 +17,7 @@ mod token_receiver;
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
-    owner: AccountId,
+    owners: LookupSet<AccountId>,
     token: AccountId,
     records: LookupMap<AccountId, Rewards>,
     deposited_amount: u128,
@@ -31,13 +31,23 @@ impl Contract{
         token: ValidAccountId,
     ) -> Self {
         assert!(!env::state_exists(), "ERR_CONTRACT_ALREADY_INTIALIZED");
-        let this = Self {
-            owner: owner.into(),
+        let mut this = Self {
+            owners: LookupSet::new(b"o".to_vec()),
             token: token.into(),
             records: LookupMap::new(b"t".to_vec()),
             deposited_amount: 0,
         };
+        this.owners.insert(&owner.to_string());
         this
+    }
+
+    fn internal_assert_owner(&self, account_id: AccountId) {
+        assert!(self.owners.contains(&account_id), "ERR_NOT_OWNER");
+    }
+
+    pub fn add_owner(&mut self, account_id: ValidAccountId) {
+       self.internal_assert_owner(env::predecessor_account_id());
+       self.owners.insert(&account_id.to_string());
     }
 
     fn internal_deposit(&mut self, amount: u128) {
@@ -83,7 +93,7 @@ impl Contract{
 
     #[payable]
     pub fn push_reward(&mut self, account_id: ValidAccountId, amount: U128, memo: String) {
-        assert_eq!(self.owner, env::predecessor_account_id(), "ERR_NOT_OWNER");
+        self.internal_assert_owner(env::predecessor_account_id());
         assert_one_yocto();
         assert!(self.deposited_amount >= amount.into(), "ERR_DEPOSITED_AMOUNT_NOT_ENOUGH");
         let mut current_rewards = self.records.get(account_id.as_ref()).unwrap_or(Rewards::new(account_id.clone().into()));
@@ -100,9 +110,7 @@ impl Contract{
         self.records.insert(account_id.as_ref(), &current_rewards);
 
         log!("Current reward for {} : {} PARAS", account_id.to_string(), current_rewards.internal_reward_amount() as f64 / 1e24);
-
     }
-
 }
 
 #[cfg(all(test, not(target_arch = "wasm32")))]
@@ -139,7 +147,7 @@ mod tests {
         let contract = Contract::new(accounts(1).into(), accounts(2).into());
         testing_env!(context.is_view(true).build());
         assert_eq!(contract.deposited_amount, 0);
-        assert_eq!(contract.owner, accounts(1).to_string());
+        assert!(contract.owners.contains(&accounts(1).to_string()));
         assert_eq!(contract.token, accounts(2).to_string());
     }
 
@@ -149,6 +157,19 @@ mod tests {
         let context = get_context(accounts(1));
         testing_env!(context.build());
         let _contract = Contract::default();
+    }
+
+    #[test]
+    fn test_add_owner(){
+        let (mut context, mut contract) = setup_contract();
+        testing_env!(context
+                .predecessor_account_id(accounts(1))
+                .build());
+        contract.add_owner(accounts(3));
+        testing_env!(context
+                .predecessor_account_id(accounts(1))
+                .build());
+        assert!(contract.owners.contains(&accounts(3).to_string()));
     }
 
     #[test]
