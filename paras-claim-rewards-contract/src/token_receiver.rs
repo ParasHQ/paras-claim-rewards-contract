@@ -8,7 +8,7 @@ impl FungibleTokenReceiver for Contract {
     /// Callback on receiving tokens by this contract.
     fn ft_on_transfer(
         &mut self,
-        _sender_id: ValidAccountId,
+        sender_id: ValidAccountId,
         amount: U128,
         msg: String,
     ) -> PromiseOrValue<U128> {
